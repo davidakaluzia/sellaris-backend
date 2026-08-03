@@ -1567,6 +1567,66 @@ paths:
                 $ref: '#/components/schemas/OrderRead'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /payments/webhook/flutterwave:
+    post:
+      tags: [Payments]
+      operationId: flutterwaveWebhook
+      summary: Receive a Flutterwave webhook event
+      description: |
+        Provider callback endpoint for Flutterwave.
+
+        The payload is verified with the `verif-hash` header before the backend queues the asynchronous payment-processing task.
+        This endpoint is exposed outside the versioned `/api/v1` prefix.
+      parameters:
+        - in: header
+          name: verif-hash
+          required: true
+          schema:
+            type: string
+          description: Flutterwave signature header used to validate the incoming webhook.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Webhook accepted and queued for async processing.
+        '400':
+          description: Missing signature header.
+        '403':
+          description: Signature verification failed.
+  /payments/webhook/paystack:
+    post:
+      tags: [Payments]
+      operationId: paystackWebhook
+      summary: Receive a Paystack webhook event
+      description: |
+        Provider callback endpoint for Paystack.
+
+        The payload is verified with the `x-paystack-signature` header before the backend queues the asynchronous payment-processing task.
+        This endpoint is exposed outside the versioned `/api/v1` prefix.
+      parameters:
+        - in: header
+          name: x-paystack-signature
+          required: true
+          schema:
+            type: string
+          description: Paystack signature header used to validate the incoming webhook.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Webhook accepted and queued for async processing.
+        '403':
+          description: Signature verification failed.
   /payments:
     get:
       tags: [Payments]
