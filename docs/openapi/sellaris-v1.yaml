@@ -1491,11 +1491,59 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /orders/all:
+    get:
+      tags: [Orders]
+      operationId: listAllOrdersForStaff
+      summary: List all orders (staff only)
+      description: |
+        Staff-only endpoint for viewing every order in the system.
+
+        This route is intended for admin/staff dashboards. It returns all orders across all users and guest sessions.
+        For regular shoppers, use /orders/checkout instead.
+
+        Integration notes for the frontend:
+        - Authentication is session-based; the staff user must be logged in and the sessionid cookie must be sent.
+        - Use the same pagination, search, and ordering query parameters as the regular list route.
+        - Supported filters: status and currency.
+        - Supported ordering fields: created_at, total_amount, and status.
+        - Search works across email, phone_number, and order id.
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Ordering'
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - in: query
+          name: currency
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated list of all orders for staff.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrderList'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /orders/checkout:
     get:
       tags: [Orders]
       operationId: listOrders
       summary: List current caller's orders
+      description: |
+        Returns orders owned by the current authenticated user or guest session.
+
+        This is the regular shopper-facing list route.
+        Staff users should use /orders/all to access the full system-wide order list.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
@@ -1627,11 +1675,64 @@ paths:
           description: Webhook accepted and queued for async processing.
         '403':
           description: Signature verification failed.
+  /payments/all:
+    get:
+      tags: [Payments]
+      operationId: listAllPaymentRecordsForStaff
+      summary: List all payments (staff only)
+      description: |
+        Staff-only endpoint for viewing every payment record in the system.
+
+        This route is intended for admin/staff dashboards. It returns all payments across all users and guest sessions.
+        For regular shoppers, use /payments instead.
+
+        Integration notes for the frontend:
+        - Authentication is session-based; the staff user must be logged in and the sessionid cookie must be sent.
+        - Use the same pagination, search, and ordering query parameters as the regular list route.
+        - Supported filters: status, provider, and currency.
+        - Supported ordering fields: created_at, confirmed_at, amount, and status.
+        - Search works across reference_id, transaction_id, and order id.
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Ordering'
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+        - in: query
+          name: provider
+          schema:
+            type: string
+            enum: [flutterwave, paystack]
+        - in: query
+          name: currency
+          schema:
+            $ref: '#/components/schemas/Currency'
+      responses:
+        '200':
+          description: Paginated list of all payments for staff.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentRecordList'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /payments:
     get:
       tags: [Payments]
       operationId: listPaymentRecords
       summary: List payment records for the current caller
+      description: |
+        Returns payment records owned by the current authenticated user or guest session.
+
+        This is the regular shopper-facing list route.
+        Staff users should use /payments/all to access the full system-wide payment list.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
