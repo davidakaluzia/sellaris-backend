@@ -9,6 +9,8 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.response import Response
 from rest_framework import status
 
+from core.permissions import IsStaffUser
+
 import logging
 
 from apps.orders.models import Order
@@ -158,3 +160,38 @@ class PaymentRecordListView(ListAPIView):
             return queryset.none()
 
         return queryset.filter(order__session_id=session_key)
+
+
+class StaffPaymentRecordListView(ListAPIView):
+    serializer_class = PaymentRecordReadSerializer
+    permission_classes = [IsStaffUser]
+
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    ]
+
+    filterset_fields = [
+        "status",
+        "provider",
+        "currency",
+    ]
+
+    search_fields = [
+        "reference_id",
+        "=transaction_id",
+        "order__id",
+    ]
+
+    ordering_fields = [
+        "created_at",
+        "confirmed_at",
+        "amount",
+        "status",
+    ]
+
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        return Payment.objects.select_related("order").all()

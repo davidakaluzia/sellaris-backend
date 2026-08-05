@@ -7,8 +7,10 @@ from rest_framework.mixins import (
 )
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import AllowAny
+from rest_framework.generics import ListAPIView
 from django.db import transaction
 from apps.orders.models import Order
+from core.permissions import IsStaffUser
 from .serializers import OrderReadSerializer, OrderWriteSerializer
 
 
@@ -51,3 +53,17 @@ class OrderAPIView(CreateModelMixin,
         # wait until payment is confirmed, for good UX
 
         return order
+
+
+class StaffOrderListView(ListAPIView):
+    serializer_class = OrderReadSerializer
+    permission_classes = [IsStaffUser]
+
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["status", "currency"]
+    search_fields = ["email", "phone_number", "id"]
+    ordering_fields = ["created_at", "total_amount", "status"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        return Order.objects.all()
