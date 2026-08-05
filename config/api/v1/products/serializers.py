@@ -1,6 +1,5 @@
 from django.db import transaction
 from rest_framework import serializers
-from tasks.process_image import process_product_image_cloudinary, process_product_image_locally
 from apps.products.models import (
     Category,
     Product,
@@ -213,18 +212,6 @@ class ProductImageWriteSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         instance = super().create(validated_data)
-
-        # Trigger task ONLY after DB commit
-        def run_task():
-            from django.conf import settings
-
-            if settings.DEBUG:
-                process_product_image_locally.delay(instance.id)
-            else:
-                process_product_image_cloudinary.delay(instance.id)
-
-        transaction.on_commit(run_task)
-
         return instance
 
 
