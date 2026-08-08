@@ -10,9 +10,16 @@ from .views import (
     UserBillingAddressListCreateAPIView,
     UserBillingAddressDetailAPIView,
     UserBillingAddressDefaultAPIView,
+    DeleteAccountAPIView,
+    GoogleOAuthAPIView,
+    FacebookOAuthAPIView,
+    AppleOAuthAPIView,
+)
+
+urlpatterns = [
     path('register', RegisterAPIView.as_view(), name='register'),
     path('login', LoginAPIView.as_view(), name='login'),
-    path("get-csrf", get_csrf),
+    path('get-csrf', get_csrf),
     path('verify-email', VerifyEmailAPIView.as_view(), name='verify-email'),
     path('resend-email-verify', ResendVerificationAPIView.as_view(), name='resend-email-verify'),
     path('account-info', AccountInfoAPIView.as_view(), name='account-info'),
