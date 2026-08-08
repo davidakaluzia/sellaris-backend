@@ -7,20 +7,18 @@ from .views import (
     ResendVerificationAPIView,
     AccountUpdateAPIView,
     AccountInfoAPIView,
-    DeleteAccountAPIView,
-    GoogleOAuthAPIView,
-    FacebookOAuthAPIView,
-    AppleOAuthAPIView,
-)
-
-
-urlpatterns = [
+    UserBillingAddressListCreateAPIView,
+    UserBillingAddressDetailAPIView,
+    UserBillingAddressDefaultAPIView,
     path('register', RegisterAPIView.as_view(), name='register'),
     path('login', LoginAPIView.as_view(), name='login'),
     path("get-csrf", get_csrf),
     path('verify-email', VerifyEmailAPIView.as_view(), name='verify-email'),
     path('resend-email-verify', ResendVerificationAPIView.as_view(), name='resend-email-verify'),
     path('account-info', AccountInfoAPIView.as_view(), name='account-info'),
+    path('billing-info', UserBillingAddressListCreateAPIView.as_view(), name='billing-info'),
+    path('billing-info/default', UserBillingAddressDefaultAPIView.as_view(), name='billing-info-default'),
+    path('billing-info/<uuid:pk>', UserBillingAddressDetailAPIView.as_view(), name='billing-info-detail'),
     path('manage-account', AccountUpdateAPIView.as_view(), name='manage-account'),
     path('delete', DeleteAccountAPIView.as_view(), name='delete-user'),
     path('google', GoogleOAuthAPIView.as_view(), name='google'),

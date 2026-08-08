@@ -2,7 +2,7 @@ from django.db import transaction
 from rest_framework.serializers import ModelSerializer, ValidationError
 
 from apps.inventory.services import reserve_stock, confirm_stock, release_stock
-from apps.orders.models import Order, OrderItem
+from apps.orders.models import Order, OrderItem, OrderAddress, OrderStatus
 
 
 # Order Item
@@ -22,10 +22,36 @@ class OrderItemReadSerializer(ModelSerializer):
 
 # Order
 
+class OrderAddressWriteSerializer(ModelSerializer):
+    class Meta:
+        model = OrderAddress
+        fields = [
+            "full_name",
+            "phone_number",
+            "address_line",
+            "city",
+            "country",
+        ]
+
+
+class OrderAddressReadSerializer(ModelSerializer):
+    class Meta:
+        model = OrderAddress
+        fields = [
+            "full_name",
+            "phone_number",
+            "address_line",
+            "city",
+            "country",
+        ]
+
+
 class OrderWriteSerializer(ModelSerializer):
+    billing_address = OrderAddressWriteSerializer(required=False)
+
     class Meta:
         model = Order
-        fields = ["id", "email", "phone_number"]
+        fields = ["id", "email", "phone_number", "billing_address"]
         read_only_fields = ["id"]
 
     @transaction.atomic
@@ -100,6 +126,32 @@ class OrderWriteSerializer(ModelSerializer):
 
         total_amount = sum(item.total_price for item in valid_items)
 
+        billing_data = validated_data.pop("billing_address", None)
+
+        if billing_data is None:
+            if user:
+                default_address = request.user.addresses.filter(is_default=True).first()
+                if default_address:
+                    billing_data = {
+                        "full_name": default_address.full_name,
+                        "phone_number": default_address.phone_number,
+                        "address_line": default_address.address_line,
+                        "city": default_address.city,
+                        "country": default_address.country,
+                    }
+                else:
+                    raise ValidationError({
+                        "billing_address": [
+                            "Authenticated users without a default billing address must provide billing_address."
+                        ]
+                    })
+            else:
+                raise ValidationError({
+                    "billing_address": [
+                        "Billing address is required for guest checkout."
+                    ]
+                })
+
         order = Order.objects.create(
             user=user,
             session_id=session_id,
@@ -107,6 +159,8 @@ class OrderWriteSerializer(ModelSerializer):
             phone_number=validated_data.get("phone_number"),
             total_amount=total_amount
         )
+
+        OrderAddress.objects.create(order=order, **billing_data)
 
         order_items = [
             OrderItem(
@@ -148,8 +202,27 @@ class OrderWriteSerializer(ModelSerializer):
         return Cart.objects.filter(session_id=session_id).first()
 
 
+class OrderStatusUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ["status"]
+
+    def validate_status(self, value):
+        allowed = {
+            OrderStatus.SHIPPED,
+            OrderStatus.DELIVERED,
+            OrderStatus.CANCELLED,
+        }
+        if value not in allowed:
+            raise ValidationError(
+                "Staff may only update order status to shipped, delivered, or cancelled."
+            )
+        return value
+
+
 class OrderReadSerializer(ModelSerializer):
     items = OrderItemReadSerializer(many=True)
+    billing_address = OrderAddressReadSerializer(read_only=True)
 
     class Meta:
         model = Order
@@ -161,4 +234,5 @@ class OrderReadSerializer(ModelSerializer):
             "total_amount",
             "created_at",
             "items",
+            "billing_address",
         ]

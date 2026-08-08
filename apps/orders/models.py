@@ -65,6 +65,26 @@ class Order(models.Model):
     def __str__(self):
         return f"Order {self.id} - {self.status}"
 
+
+class OrderAddress(models.Model):
+    order = models.OneToOneField(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="billing_address"
+    )
+
+    full_name = models.CharField(max_length=255)
+    phone_number = models.CharField(max_length=20)
+    address_line = models.TextField()
+    city = models.CharField(max_length=100)
+    country = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"Billing address for order {self.order_id}"
+
+    def __str__(self):
+        return f"Order {self.id} - {self.status}"
+
 class OrderItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
 

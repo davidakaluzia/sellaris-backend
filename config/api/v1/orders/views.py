@@ -7,11 +7,11 @@ from rest_framework.mixins import (
 )
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.permissions import AllowAny
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, UpdateAPIView
 from django.db import transaction
 from apps.orders.models import Order
 from core.permissions import IsStaffUser
-from .serializers import OrderReadSerializer, OrderWriteSerializer
+from .serializers import OrderReadSerializer, OrderWriteSerializer, OrderStatusUpdateSerializer
 
 
 class OrderAPIView(CreateModelMixin,
@@ -67,3 +67,11 @@ class StaffOrderListView(ListAPIView):
 
     def get_queryset(self):
         return Order.objects.all()
+
+
+class StaffOrderStatusUpdateAPIView(UpdateAPIView):
+    serializer_class = OrderStatusUpdateSerializer
+    queryset = Order.objects.all()
+    permission_classes = [IsStaffUser]
+    lookup_field = "pk"
+    http_method_names = ["patch"]

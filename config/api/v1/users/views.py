@@ -13,6 +13,7 @@ from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework import status
@@ -31,7 +32,8 @@ from tasks.send_email import send_verification_email_task
 from .serializers import (
     RegisterSerializer, 
     UserUpdateSerializer, 
-    UserReadSerializer
+    UserReadSerializer,
+    UserBillingAddressSerializer,
 )
 from apps.users.throttles import (
     RegisterThrottle,
@@ -178,6 +180,78 @@ class AccountInfoAPIView(APIView):
     def get(self, request):
         user = request.user
         serializer = UserReadSerializer(user)
+        return Response(serializer.data)
+
+
+class UserBillingAddressListCreateAPIView(ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserBillingAddressSerializer
+
+    def get_queryset(self):
+        return self.request.user.addresses.all().order_by("-is_default", "id")
+
+    def perform_create(self, serializer):
+        address = serializer.save()
+
+        if address.is_default:
+            self.request.user.addresses.exclude(id=address.id).update(is_default=False)
+
+        return address
+
+
+class UserBillingAddressDetailAPIView(RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserBillingAddressSerializer
+    lookup_field = "pk"
+
+    def get_queryset(self):
+        return self.request.user.addresses.all()
+
+    def perform_update(self, serializer):
+        address = serializer.save()
+
+        if address.is_default:
+            self.request.user.addresses.exclude(id=address.id).update(is_default=False)
+
+        return address
+
+
+class UserBillingAddressDefaultAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        billing_address = request.user.addresses.filter(is_default=True).first()
+
+        if not billing_address:
+            return Response(
+                {"detail": "No default billing address found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = UserBillingAddressSerializer(billing_address)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        billing_address = request.user.addresses.filter(is_default=True).first()
+
+        if not billing_address:
+            return Response(
+                {"detail": "No default billing address found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = UserBillingAddressSerializer(
+            billing_address,
+            data=request.data,
+            partial=True,
+            context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+        address = serializer.save()
+
+        if address.is_default:
+            request.user.addresses.exclude(id=address.id).update(is_default=False)
+
         return Response(serializer.data)
 
 

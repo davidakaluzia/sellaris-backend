@@ -205,6 +205,162 @@ paths:
                 $ref: '#/components/schemas/AccountInfo'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /users/billing-info:
+    get:
+      tags: [Auth]
+      operationId: listBillingAddresses
+      summary: List all billing addresses for the current user
+      description: |
+        Returns the authenticated user's billing address list, with pagination to avoid large responses.
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated list of user billing addresses.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBillingAddressList'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    post:
+      tags: [Auth]
+      operationId: createBillingAddress
+      summary: Create a new billing address for the current user
+      security:
+        - SessionCookie: []
+      description: |
+        Adds a new billing address for the authenticated user.
+        The first billing address created becomes default unless explicitly created with `is_default: false`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillingAddress'
+            example:
+              full_name: Ada Lovelace
+              phone_number: '+2348012345678'
+              address_line: '123 Example Street'
+              city: Lagos
+              country: Nigeria
+              is_default: true
+      responses:
+        '201':
+          description: Billing address created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingAddress'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /users/billing-info/{addressId}:
+    parameters:
+      - in: path
+        name: addressId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Auth]
+      operationId: getBillingAddress
+      summary: Retrieve a single billing address for the current user
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Billing address details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingAddress'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+    patch:
+      tags: [Auth]
+      operationId: updateBillingAddress
+      summary: Update a specific billing address for the current user
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillingAddress'
+            example:
+              address_line: '456 Example Avenue'
+              city: Abuja
+              country: Nigeria
+              is_default: true
+      responses:
+        '200':
+          description: Billing address updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingAddress'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /users/billing-info/default:
+    get:
+      tags: [Auth]
+      operationId: getDefaultBillingAddress
+      summary: Retrieve the current user's default billing address
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Default billing address.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingAddress'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+    patch:
+      tags: [Auth]
+      operationId: updateDefaultBillingAddress
+      summary: Update the user's default billing address
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BillingAddress'
+            example:
+              address_line: '456 Example Avenue'
+              city: Abuja
+              country: Nigeria
+      responses:
+        '200':
+          description: Default billing address updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingAddress'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /users/manage-account:
     patch:
       tags: [Auth]
@@ -1534,6 +1690,41 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+  /orders/all/{orderId}/status:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    patch:
+      tags: [Orders]
+      operationId: updateOrderStatus
+      summary: Update a staff-visible order status
+      description: |
+        Allows staff to update an order status to shipped, delivered, or cancelled.
+        This endpoint is intended for order lifecycle state transitions.
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusUpdateRequest'
+            example:
+              status: delivered
+      responses:
+        '200':
+          description: Order status updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderRead'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /orders/checkout:
     get:
       tags: [Orders]
@@ -1574,6 +1765,9 @@ paths:
         During checkout the backend revalidates current price and stock, auto-adjusts quantities if needed,
         reserves stock, and creates the order plus snapshot order items.
 
+        Authenticated users may omit billing_address if they already have a default billing address on file.
+        Guest users must provide billing_address as part of the request.
+
         The create response is intentionally compact and is not the same shape as the full order read model.
       requestBody:
         required: true
@@ -1584,6 +1778,12 @@ paths:
             example:
               email: shopper@example.com
               phone_number: '+2348012345678'
+              billing_address:
+                full_name: Alice Example
+                phone_number: '+2348012345678'
+                address_line: '123 Main Street'
+                city: Lagos
+                country: Nigeria
       responses:
         '201':
           description: Order created.
@@ -2546,6 +2746,8 @@ components:
           format: email
         phone_number:
           type: string
+        billing_address:
+          $ref: '#/components/schemas/BillingAddress'
     CheckoutChangeSummary:
       type: object
       properties:
@@ -2645,6 +2847,34 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrderItemRead'
+        billing_address:
+          $ref: '#/components/schemas/BillingAddress'
+    BillingAddress:
+      type: object
+      required: [full_name, phone_number, address_line, city, country]
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        phone_number:
+          type: string
+        address_line:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        is_default:
+          type: boolean
+    OrderStatusUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [shipped, delivered, cancelled]
     PaymentInitializeRequest:
       type: object
       required: [order_id, provider]
@@ -2838,6 +3068,15 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/OrderRead'
+    PaginatedBillingAddressList:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedBase'
+        - type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/BillingAddress'
     PaginatedPaymentRecordList:
       allOf:
         - $ref: '#/components/schemas/PaginatedBase'
