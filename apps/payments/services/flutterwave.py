@@ -25,7 +25,7 @@ class FlutterwaveService:
                 "email": customer_email
             },
             "customizations": {
-                "title": settings.EMAIL_FROM_NAME,
+                "title": settings.SHOP_NAME,
             }
         }
 

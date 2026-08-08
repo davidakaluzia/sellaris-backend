@@ -42,7 +42,7 @@ class SendPulseEmailService(EmailService):
                 "html": body,
                 "text": body,
                 "from": {
-                    "name": settings.EMAIL_FROM_NAME,
+                    "name": settings.SHOP_NAME,
                     "email": settings.DEFAULT_FROM_EMAIL,
                 },
                 "to": [

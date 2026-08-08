@@ -66,7 +66,10 @@ VERIFY_EMAIL_PATH = env("VERIFY_EMAIL_PATH", default='/verify-email')
 
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default='')
 
-EMAIL_FROM_NAME = env("EMAIL_FROM_NAME", default="Shop")
+SHOP_NAME = env("SHOP_NAME", default=env("EMAIL_FROM_NAME", default="Shop"))
+BRAND_COLOR = env("BRAND_COLOR", default="#6F00FF")
+
+EMAIL_FROM_NAME = SHOP_NAME
 
 SENDPULSE_CLIENT_ID = env("SENDPULSE_CLIENT_ID", default='')
 SENDPULSE_CLIENT_SECRET = env("SENDPULSE_CLIENT_SECRET", default='')
