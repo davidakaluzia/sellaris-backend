@@ -13,7 +13,7 @@ from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework import status
@@ -199,7 +199,7 @@ class UserBillingAddressListCreateAPIView(ListCreateAPIView):
         return address
 
 
-class UserBillingAddressDetailAPIView(RetrieveUpdateAPIView):
+class UserBillingAddressDetailAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UserBillingAddressSerializer
     lookup_field = "pk"
@@ -214,6 +214,18 @@ class UserBillingAddressDetailAPIView(RetrieveUpdateAPIView):
             self.request.user.addresses.exclude(id=address.id).update(is_default=False)
 
         return address
+
+    def perform_destroy(self, instance):
+        was_default = instance.is_default
+        user = self.request.user
+
+        instance.delete()
+
+        if was_default:
+            replacement = user.addresses.order_by("-id").first()
+            if replacement:
+                replacement.is_default = True
+                replacement.save(update_fields=["is_default"])
 
 
 class UserBillingAddressDefaultAPIView(APIView):
